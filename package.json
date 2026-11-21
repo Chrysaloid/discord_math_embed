@@ -1,0 +1,14 @@
+{
+  "name": "discord_math_embed",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker: a math expression in the URL, its result in the Discord embed",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "mathjs": "^15.2.0"
+  }
+}
