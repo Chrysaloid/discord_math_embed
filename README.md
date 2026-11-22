@@ -41,6 +41,19 @@ or [run_local_server.ps1](run_local_server.ps1) (F5 works), which type-checks fi
 error stops, leaving the previous run's server running; otherwise it closes the previous run's tab,
 runs `wrangler dev` in a Windows Terminal tab of its own, and returns once the server answers.
 
+## Profile
+
+    python profile_fetch.py                 # with the local server running; F5 works
+    python profile_fetch.py "factorial(170)" -n 10000 --flame
+
+[profile_fetch.py](profile_fetch.py) records the V8 CPU profile of `wrangler dev` (workerd) through
+its inspector while it sends an expression to `/embed` thousands of times, and prints where
+`fetch()` spends its time: functions by total and self share, a top-down call tree, and the lines of
+`src/` - all mapped back from wrangler's bundle to `src/` and `node_modules/`. It saves each profile,
+source-mapped, to `profiles/` (git-ignored); `--flame` opens it as a flame graph in speedscope (the
+global npm install). Its docstring explains why it reports shares of samples and not milliseconds:
+workerd's sampler on Windows takes only about one sample per 15 ms of busy time.
+
 ## Type-check
 
 The Worker is TypeScript, which wrangler bundles as it is; nothing compiles it to JavaScript.

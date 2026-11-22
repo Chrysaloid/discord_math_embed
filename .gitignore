@@ -1,6 +1,8 @@
 node_modules/
 .wrangler/
 dist/
+profiles/
+__pycache__/
 .dev.vars
 *.png
 *.jpg
