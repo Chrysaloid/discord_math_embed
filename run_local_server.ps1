@@ -10,11 +10,12 @@
 	"discord_math_embed server" (the one a previous run opened, running or sitting on an error), waits for
 	the port to be free, and reopens itself in a new tab with that title, where it runs
 
-		wrangler dev --ip 127.0.0.1 --port <port>
+		wrangler dev --ip 0.0.0.0 --port <port>
 
-	It returns once http://127.0.0.1:<port>/ answers, and fails when the tab's server never does. In the tab,
-	wrangler's own keys work (b opens the browser, x stops it); when wrangler fails, the tab stays open until
-	Enter. Test with, for example:
+	so the server listens on all interfaces - reachable from the LAN, the ZeroTier network and the phone too,
+	not just this PC (wrangler's inspector stays on 127.0.0.1). It returns once http://127.0.0.1:<port>/
+	answers, and fails when the tab's server never does. In the tab, wrangler's own keys work (b opens the
+	browser, x stops it); when wrangler fails, the tab stays open until Enter. Test with, for example:
 
 		http://127.0.0.1:8787/embed?expression=2%2B2
 
@@ -30,7 +31,7 @@ $TAB_TITLE = 'discord_math_embed server'
 #* In the tab: the server itself
 if ($in_tab) {
 	Set-Location $PSScriptRoot
-	wrangler dev --ip 127.0.0.1 --port $port
+	wrangler dev --ip 0.0.0.0 --port $port
 	exit_wt_tab $LASTEXITCODE
 }
 
