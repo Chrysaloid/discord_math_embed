@@ -4,14 +4,17 @@ The /embed page, both the embed and its creator. src/index.ts imports this file 
 replaces the embed_meta comment with the <title> and Open Graph tags of the URL's expression,
 which Discord turns into the embed (it runs no JavaScript). In a browser the page is the
 creator: type an expression, see the Discord embed it gives, copy the masked link to paste on
-Discord. The preview reads the embed from those same meta tags - the page's own for the URL's
-expression, a fetched /embed page's for a typed one - so it shows exactly what Discord gets.
+Discord. /creator.js (src/creator.ts, bundled with math.js) evaluates the expression in the
+browser with the Worker's own code, so the preview shows what Discord gets without a request
+per keystroke.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <!--embed_meta-->
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/creator.js" defer></script>
+<link rel="icon" href="data:,"><!-- no icon, so the browser does not ask the Worker for /favicon.ico -->
 <style>
 :root {
 	color-scheme: dark;
@@ -135,110 +138,5 @@ footer { margin-top: 3em; font-size: 0.85em; color: #949ba4; }
 	operators, functions (<code>sqrt</code>, <code>sin</code>, <code>log</code>, ...), constants (<code>pi</code>,
 	<code>e</code>), units (<code>5 cm to inch</code>), matrices, several expressions separated by <code>;</code>.
 </footer>
-
-<script>
-"use strict";
-const DEFAULT_EXPRESSION = "2+2";
-const DEBOUNCE_MS = 250;
-const COPIED_LABEL_MS = 1500;
-
-const expression_input = document.getElementById("expression");
-const status_line = document.getElementById("status");
-const message_link = document.getElementById("message_link");
-const embed = document.getElementById("embed");
-const embed_provider = document.getElementById("embed_provider");
-const embed_title = document.getElementById("embed_title");
-const embed_description = document.getElementById("embed_description");
-const markdown = document.getElementById("markdown");
-const copy_button = document.getElementById("copy");
-let debounce_timer = 0;
-let pending_request = null;
-
-//* Building the link
-/** encodeURIComponent leaves ! ' ( ) * as they are, and a ")" would end Discord's masked link early. */
-function encode_query_value(text) {
-	return encodeURIComponent(text).replace(/[!'()*]/g, character => "%" + character.charCodeAt(0).toString(16).toUpperCase());
-}
-function embed_url(expression) {
-	return `${location.origin}/embed?expression=${encode_query_value(expression)}`;
-}
-/** Backslash-escapes what Discord's markdown would otherwise format inside the link text. */
-function escape_discord_markdown(text) {
-	return text.replace(/[\\*_~`|[\]<>:@#]/g, "\\$&");
-}
-//* Showing an embed
-/** The embed Discord builds from `page`'s meta tags: { provider, title, description, color }. */
-function read_embed(page) {
-	const meta = selector => page.querySelector(selector)?.content ?? "";
-	return {
-		provider: meta('meta[property="og:site_name"]'),
-		title: meta('meta[property="og:title"]'),
-		description: meta('meta[property="og:description"]'),
-		color: meta('meta[name="theme-color"]'),
-	};
-}
-function show_embed(expression, { provider, title, description, color }) {
-	const url = embed_url(expression);
-	embed_provider.textContent = provider;
-	message_link.textContent = title;
-	message_link.href = url;
-	embed_title.textContent = title;
-	embed_title.href = url;
-	embed_description.textContent = description;
-	embed.style.setProperty("--embed_color", color);
-	markdown.textContent = `[${escape_discord_markdown(title)}](${url})`;
-	copy_button.disabled = false;
-}
-function show_nothing(message) {
-	embed_provider.textContent = "";
-	message_link.textContent = "";
-	embed_title.textContent = "";
-	embed_description.textContent = "";
-	embed.style.removeProperty("--embed_color");
-	markdown.textContent = "";
-	copy_button.disabled = true;
-	status_line.textContent = message;
-}
-/** Shows the typed expression's embed, read from its /embed page; with `from_this_page`, from this
- * page's own meta tags, which already hold it. */
-async function update(from_this_page = false) {
-	const expression = expression_input.value;
-	history.replaceState(null, "", expression === "" ? location.pathname : `?expression=${encode_query_value(expression)}`);
-	pending_request?.abort();
-	if (expression.trim() === "") {
-		show_nothing("Type an expression.");
-		return;
-	}
-	if (from_this_page) {
-		show_embed(expression, read_embed(document));
-		return;
-	}
-	const request = pending_request = new AbortController();
-	status_line.textContent = "Evaluating...";
-	try {
-		const response = await fetch(embed_url(expression), { signal: request.signal });
-		if (!response.ok) throw new Error(`the server answered ${response.status} ${response.statusText}`);
-		show_embed(expression, read_embed(new DOMParser().parseFromString(await response.text(), "text/html")));
-		status_line.textContent = "";
-	} catch (error) {
-		if (error.name !== "AbortError") show_nothing(`Could not evaluate: ${error.message}`);
-	}
-}
-//* Events
-expression_input.addEventListener("input", () => {
-	clearTimeout(debounce_timer);
-	debounce_timer = setTimeout(update, DEBOUNCE_MS);
-});
-copy_button.addEventListener("click", async () => {
-	await navigator.clipboard.writeText(markdown.textContent);
-	copy_button.textContent = "Copied";
-	setTimeout(() => { copy_button.textContent = "Copy" }, COPIED_LABEL_MS);
-});
-//* Start: the URL's expression has its embed in this page already, the default one is fetched
-const url_parameters = new URLSearchParams(location.search);
-const url_expression = url_parameters.get("expression") ?? url_parameters.get("expr") ?? "";
-expression_input.value = url_expression.trim() === "" ? DEFAULT_EXPRESSION : url_expression;
-update(url_expression.trim() !== "");
-</script>
 </body>
 </html>

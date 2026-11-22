@@ -13,5 +13,7 @@
 		"skipLibCheck": true,
 		"noEmit": true
 	},
-	"include": ["src", "worker-configuration.d.ts"]
+	"include": ["src", "worker-configuration.d.ts"],
+	// The browser side, checked with the DOM types by tsconfig.creator.json
+	"exclude": ["src/creator.ts"]
 }

@@ -8,7 +8,8 @@
     "dev": "wrangler dev",
     "predeploy": "npm run typecheck",
     "deploy": "wrangler deploy",
-    "typecheck": "wrangler types && tsc"
+    "build": "esbuild src/creator.ts --bundle --minify --sourcemap --target=es2022 --outfile=dist/creator.js --log-level=warning",
+    "typecheck": "wrangler types && tsc && tsc -p tsconfig.creator.json"
   },
   "dependencies": {
     "mathjs": "^15.2.0"

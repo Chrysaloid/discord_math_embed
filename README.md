@@ -17,6 +17,21 @@ masked link to paste, such as
 embed's title on Discord opens the creator with that expression. Discord reads only the page's meta
 tags and runs none of its JavaScript. `/embed` is the only path; every other one redirects to it.
 
+The creator evaluates in the browser, so typing sends no requests. The math.js setup and the embed
+building live in [src/build_embed.ts](src/build_embed.ts), used by both the Worker
+([src/index.ts](src/index.ts)) and the creator ([src/creator.ts](src/creator.ts)). esbuild bundles
+the creator, math.js included, into `dist/creator.js` (git-ignored, generated), which Cloudflare
+serves as a static asset without running the Worker. Since a browser is not held to the Worker's
+CPU limit (see Deploy), the creator warns when an expression took longer than that to evaluate.
+
+## Build
+
+    npm run build           # esbuild src/creator.ts -> dist/creator.js
+
+wrangler runs it by itself (`[build]` in [wrangler.toml](wrangler.toml)) before `wrangler dev`,
+`wrangler deploy` and `wrangler types`, and again in `wrangler dev` when something in `src/` changes,
+so it rarely needs running by hand. `esbuild` is the global npm install.
+
 ## Run locally
 
     npm install
@@ -30,11 +45,13 @@ runs `wrangler dev` in a Windows Terminal tab of its own, and returns once the s
 
 The Worker is TypeScript, which wrangler bundles as it is; nothing compiles it to JavaScript.
 
-    npm run typecheck       # wrangler types && tsc
+    npm run typecheck       # wrangler types && tsc && tsc -p tsconfig.creator.json
 
 `wrangler types` writes `worker-configuration.d.ts` (the Workers runtime types and `Env`, from
 `wrangler.toml`; git-ignored, since it is generated), and `tsc` checks against it without emitting
-anything. Both `wrangler` and `tsc` are the global npm installs.
+anything. The browser side, [src/creator.ts](src/creator.ts), needs the DOM types instead, so
+[tsconfig.creator.json](tsconfig.creator.json) checks it, and `tsconfig.json` leaves it out;
+`src/build_embed.ts` gets checked by both. Both `wrangler` and `tsc` are the global npm installs.
 
 ## Deploy
 

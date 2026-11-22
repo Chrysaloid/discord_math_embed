@@ -1,3 +1,12 @@
 name = "discord-math-embed"
 main = "src/index.ts"
 compatibility_date = "2026-11-01"
+
+#* The creator's browser bundle: built before `wrangler dev` (again on a change in src/) and `wrangler deploy`
+[build]
+command = "npm run build"
+watch_dir = "src"
+
+#* dist/ (that bundle) is served as static assets, without running the Worker
+[assets]
+directory = "./dist"

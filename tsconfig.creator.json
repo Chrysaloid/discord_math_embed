@@ -1,0 +1,9 @@
+{
+	// The browser side, src/creator.ts (and src/build_embed.ts it imports): the DOM instead of the Workers runtime
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"lib": ["es2024", "dom", "dom.iterable"]
+	},
+	"include": ["src/creator.ts"],
+	"exclude": []
+}
