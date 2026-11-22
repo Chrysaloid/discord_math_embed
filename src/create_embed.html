@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<!--
+The /create_embed page: type an expression, see the Discord embed it gives, copy the markdown
+masked link to paste on Discord. The embed comes from the Worker's /api/embed, so the preview
+shows exactly what /embed puts into the Open Graph tags. Served as it is by src/index.ts,
+which imports this file as text.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Create your own embedded math</title>
+<meta property="og:site_name" content="Math embed">
+<meta property="og:title" content="Create your own embedded math">
+<meta property="og:description" content="Type an expression, copy the link, paste it on Discord.">
+<meta name="theme-color" content="#5865F2">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root {
+	color-scheme: dark;
+	--discord_font: "gg sans", "Noto Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	--discord_background: #000000;
+	--discord_embed_background: #0a0a0c;
+	--discord_embed_border: #26262a;
+	--discord_text: #d4d5d8;
+	--discord_link: #2781e7;
+}
+body {
+	font-family: system-ui, sans-serif;
+	background: #111214;
+	color: #e3e5e8;
+	max-width: 46em;
+	margin: 3em auto;
+	padding: 0 1em;
+}
+h1 { font-size: 2em; text-align: center; }
+h2 { font-size: 1em; font-weight: 600; margin: 2em 0 0.5em; color: #b5bac1; }
+a { color: var(--discord_link); }
+.expression_row { display: flex; align-items: center; gap: 0.6em; font-size: 1.1em; }
+.expression_row input {
+	flex: 1;
+	min-width: 0;
+	font: inherit;
+	font-family: ui-monospace, Consolas, monospace;
+	padding: 0.4em 0.6em;
+	background: #1e1f22;
+	color: inherit;
+	border: 1px solid #3f4147;
+	border-radius: 4px;
+}
+.expression_row input:focus { outline: 2px solid #5865f2; outline-offset: -1px; }
+#status { min-height: 1.3em; margin: 0.4em 0 0; font-size: 0.85em; color: #949ba4; }
+
+/* The Discord mock-up: a message with the masked link, and its embed under it */
+.discord_message {
+	font-family: var(--discord_font);
+	background: var(--discord_background);
+	color: var(--discord_text);
+	padding: 12px 16px 16px;
+	border-radius: 8px;
+	font-size: 16px;
+	line-height: 1.375;
+}
+.discord_message a, .discord_embed_title { color: var(--discord_link); text-decoration: none; }
+.discord_message a:hover { text-decoration: underline; }
+.discord_embed {
+	display: grid;
+	gap: 8px;
+	max-width: 432px;
+	margin-top: 4px;
+	padding: 8px 16px 16px 12px;
+	background: var(--discord_embed_background);
+	border: 1px solid var(--discord_embed_border);
+	border-left: 4px solid var(--embed_color, #5865F2);
+	border-radius: 4px;
+	box-sizing: border-box;
+	overflow-wrap: anywhere;
+}
+.discord_embed_provider { margin-top: 8px; font-size: 12px; line-height: 16px; }
+.discord_embed_provider a { color: inherit; }
+.discord_embed_title { font-size: 16px; font-weight: 600; line-height: 22px; }
+.discord_embed_description { font-size: 14px; line-height: 18px; white-space: pre-line; }
+.discord_embed_description:empty { display: none; }
+
+.markdown_row { display: flex; gap: 0.6em; align-items: stretch; }
+#markdown {
+	flex: 1;
+	min-width: 0;
+	margin: 0;
+	padding: 0.6em 0.8em;
+	background: #1e1f22;
+	border: 1px solid #3f4147;
+	border-radius: 4px;
+	font-family: ui-monospace, Consolas, monospace;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+button {
+	font: inherit;
+	padding: 0 1.2em;
+	background: #5865f2;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+}
+button:hover { background: #4752c4; }
+button:disabled { background: #3f4147; color: #949ba4; cursor: default; }
+footer { margin-top: 3em; font-size: 0.85em; color: #949ba4; }
+</style>
+</head>
+<body>
+<h1>Create your own embedded math</h1>
+
+<label class="expression_row">Expression:
+	<input id="expression" type="text" spellcheck="false" autocomplete="off" autofocus>
+</label>
+<p id="status"></p>
+
+<h2>Preview</h2>
+<div class="discord_message">
+	<a id="message_link" target="_blank"></a>
+	<div class="discord_embed" id="embed">
+		<div class="discord_embed_provider"><a href="/create_embed">Math embed · Create your own</a></div>
+		<a class="discord_embed_title" id="embed_title" target="_blank"></a>
+		<div class="discord_embed_description" id="embed_description"></div>
+	</div>
+</div>
+
+<h2>Paste this on Discord</h2>
+<div class="markdown_row">
+	<pre id="markdown"></pre>
+	<button id="copy" type="button">Copy</button>
+</div>
+
+<footer>
+	Expressions are evaluated by <a href="https://mathjs.org/docs/expressions/syntax.html" target="_blank">math.js</a>:
+	operators, functions (<code>sqrt</code>, <code>sin</code>, <code>log</code>, ...), constants (<code>pi</code>,
+	<code>e</code>), units (<code>5 cm to inch</code>), matrices, several expressions separated by <code>;</code>.
+</footer>
+
+<script>
+"use strict";
+const DEFAULT_EXPRESSION = "2+2";
+const DEBOUNCE_MS = 250;
+const COPIED_LABEL_MS = 1500;
+
+const expression_input = document.getElementById("expression");
+const status_line = document.getElementById("status");
+const message_link = document.getElementById("message_link");
+const embed = document.getElementById("embed");
+const embed_title = document.getElementById("embed_title");
+const embed_description = document.getElementById("embed_description");
+const markdown = document.getElementById("markdown");
+const copy_button = document.getElementById("copy");
+let debounce_timer = 0;
+let pending_request = null;
+
+//* Building the link
+/** encodeURIComponent leaves ! ' ( ) * as they are, and a ")" would end Discord's masked link early. */
+function encode_query_value(text) {
+	return encodeURIComponent(text).replace(/[!'()*]/g, character => "%" + character.charCodeAt(0).toString(16).toUpperCase());
+}
+function embed_url(expression) {
+	return `${location.origin}/embed?expression=${encode_query_value(expression)}`;
+}
+/** Backslash-escapes what Discord's markdown would otherwise format inside the link text. */
+function escape_discord_markdown(text) {
+	return text.replace(/[\\*_~`|[\]<>:@#]/g, "\\$&");
+}
+//* Showing an embed
+function show_embed(expression, { title, description, color }) {
+	const url = embed_url(expression);
+	message_link.textContent = title;
+	message_link.href = url;
+	embed_title.textContent = title;
+	embed_title.href = url;
+	embed_description.textContent = description;
+	embed.style.setProperty("--embed_color", color);
+	markdown.textContent = `[${escape_discord_markdown(title)}](${url})`;
+	copy_button.disabled = false;
+}
+function show_nothing(message) {
+	message_link.textContent = "";
+	embed_title.textContent = "";
+	embed_description.textContent = "";
+	embed.style.removeProperty("--embed_color");
+	markdown.textContent = "";
+	copy_button.disabled = true;
+	status_line.textContent = message;
+}
+async function update() {
+	const expression = expression_input.value;
+	history.replaceState(null, "", expression === "" ? location.pathname : `?expression=${encode_query_value(expression)}`);
+	pending_request?.abort();
+	if (expression.trim() === "") {
+		show_nothing("Type an expression.");
+		return;
+	}
+	const request = pending_request = new AbortController();
+	status_line.textContent = "Evaluating...";
+	try {
+		const response = await fetch(`/api/embed?expression=${encode_query_value(expression)}`, { signal: request.signal });
+		if (!response.ok) throw new Error(`the server answered ${response.status} ${response.statusText}`);
+		show_embed(expression, await response.json());
+		status_line.textContent = "";
+	} catch (error) {
+		if (error.name !== "AbortError") show_nothing(`Could not evaluate: ${error.message}`);
+	}
+}
+//* Events
+expression_input.addEventListener("input", () => {
+	clearTimeout(debounce_timer);
+	debounce_timer = setTimeout(update, DEBOUNCE_MS);
+});
+copy_button.addEventListener("click", async () => {
+	await navigator.clipboard.writeText(markdown.textContent);
+	copy_button.textContent = "Copied";
+	setTimeout(() => { copy_button.textContent = "Copy" }, COPIED_LABEL_MS);
+});
+expression_input.value = new URLSearchParams(location.search).get("expression") ?? DEFAULT_EXPRESSION;
+update();
+</script>
+</body>
+</html>

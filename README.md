@@ -10,6 +10,14 @@ link's Open Graph tags. Paste the link into Discord and the embed shows the answ
 [math.js](https://mathjs.org/docs/expressions/syntax.html), with the functions that reach outside
 one evaluation disabled. [src/index.ts](src/index.ts)'s header has the details.
 
+`/create_embed` ([src/create_embed.html](src/create_embed.html)) does the encoding for you: type an
+expression, see a live preview of the Discord embed, and copy the masked link to paste, such as
+`[2+2 = 4](https://discord-math-embed.chrysaloid.workers.dev/embed?expression=2%2B2)`.
+
+Every embed's top line reads "Math embed · Create your own" and links to `/create_embed`. Open Graph
+cannot give that line a link, so each embed page links an oEmbed JSON (`/oembed`) whose
+`provider_name` and `provider_url` Discord uses for it - the whole line is one link.
+
 ## Run locally
 
     npm install

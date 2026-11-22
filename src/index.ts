@@ -12,10 +12,19 @@ separated by `;` (the last one is the result). The functions that could reach ou
 single evaluation (import, createUnit, evaluate, parse, ...) are disabled, following
 https://mathjs.org/docs/expressions/security.html.
 
-Every other path answers with a short usage page. Discord builds the embed from the HTML
-the server sends (no JavaScript runs), so everything is rendered here.
+Paths:
+   /embed?expression=...       the embed page; Discord builds the embed from its HTML (no
+                               JavaScript runs there), so everything is rendered here
+   /create_embed               a page that previews the embed of a typed expression and gives
+                               the masked link to paste on Discord (src/create_embed.html)
+   /api/embed?expression=...   the embed as JSON, { title, description, color }, for that page
+   /oembed                     the oEmbed JSON every embed page links to; it makes the embed's
+                               top line "Math embed · Create your own", a link to /create_embed
+                               (Open Graph has no way to give that line a link)
+Every other path answers with a short usage page.
 */
 import { all, create } from "mathjs";
+import create_embed_page from "./create_embed.html";
 
 //* math.js with the dangerous functions disabled
 // math.js declares `all` as one entry of a Record, so noUncheckedIndexedAccess adds `| undefined`
@@ -35,7 +44,11 @@ const MAX_RESULT_LENGTH = 1000;
 const MAX_TITLE_LENGTH = 256;  // Discord's embed title limit
 const RESULT_PRECISION = 14;
 const EMBED_COLOR = "#5865F2";
+const ERROR_COLOR = "#ED4245";
 const SITE_NAME = "Math embed";
+const PROVIDER_NAME = `${SITE_NAME} · Create your own`;  // the embed's top line
+const CREATE_EMBED_PATH = "/create_embed";
+const CACHE_CONTROL = "public, max-age=86400";
 
 //* Helpers
 const HTML_ESCAPES: Readonly<Record<string, string>> = {
@@ -63,18 +76,44 @@ function evaluate_expression(expression: string): Evaluation {
 		return { error: exception instanceof Error ? exception.message : String(exception) };
 	}
 }
-/** A page whose Open Graph tags carry `title` and `description` (left out when empty) into the
- * Discord embed, with `color` as the embed's side bar. */
-function html_page(title: string, description = "", color = EMBED_COLOR): Response {
+/** What the Discord embed shows: `description` is left out of the page when empty, `color` is the
+ * embed's side bar. */
+type Embed = { title: string; description: string; color: string };
+/** The embed of `expression`: "expression = result", or "expression → error" with the error message
+ * as the description. */
+function build_embed(expression: string): Embed {
+	const evaluation = evaluate_expression(expression);
+	if ("error" in evaluation) {
+		return { title: `${truncate(expression, 200)} → error`, description: evaluation.error, color: ERROR_COLOR };
+	}
+	// A result too long for the title goes whole into the description, which allows 4096
+	const title = `${truncate(expression, 200)} = ${evaluation.result}`;
+	if (title.length <= MAX_TITLE_LENGTH) return { title, description: "", color: EMBED_COLOR };
+	return { title: truncate(title, MAX_TITLE_LENGTH), description: evaluation.result, color: EMBED_COLOR };
+}
+function html_response(page: string): Response {
+	return new Response(page, {
+		headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": CACHE_CONTROL },
+	});
+}
+function json_response(value: unknown): Response {
+	return new Response(JSON.stringify(value), {
+		headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": CACHE_CONTROL },
+	});
+}
+/** A page whose Open Graph tags carry `embed` into the Discord embed. It links the oEmbed JSON at
+ * `origin`/oembed, which gives the embed its top line. */
+function html_page(origin: string, { title, description, color }: Embed): Response {
 	const description_meta = description === "" ? "" : `<meta property="og:description" content="${escape_html(description)}">\n`;
-	const page = `<!DOCTYPE html>
+	return html_response(`<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <title>${escape_html(title)}</title>
-<meta property="og:site_name" content="${escape_html(SITE_NAME)}">
+<meta property="og:site_name" content="${escape_html(PROVIDER_NAME)}">
 <meta property="og:title" content="${escape_html(title)}">
 ${description_meta}<meta name="theme-color" content="${color}">
+<link rel="alternate" type="application/json+oembed" href="${escape_html(origin)}/oembed">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body { font-family: system-ui, sans-serif; max-width: 40em; margin: 3em auto; padding: 0 1em; }
@@ -84,15 +123,10 @@ h1 { font-size: 2em; word-break: break-word; text-align: center }
 <body>
 <h1>${escape_html(title)}</h1>
 <p>${escape_html(description)}</p>
+<p><a href="${CREATE_EMBED_PATH}">Create your own</a></p>
 </body>
 </html>
-`;
-	return new Response(page, {
-		headers: {
-			"Content-Type": "text/html; charset=utf-8",
-			"Cache-Control": "public, max-age=86400",
-		},
-	});
+`);
 }
 
 //* Worker entry point
@@ -100,14 +134,28 @@ export default {
 	fetch(request: Request): Response {
 		const url = new URL(request.url);
 		const expression = url.searchParams.get("expression") ?? url.searchParams.get("expr");
-		if (url.pathname !== "/embed" || expression === null || expression.trim() === "") {
-			return html_page(SITE_NAME, `Usage: ${url.origin}/embed?expression=2%2B2`);
+		const has_expression = expression !== null && expression.trim() !== "";
+		switch (url.pathname) {
+			case CREATE_EMBED_PATH:
+				return html_response(create_embed_page);
+			case "/oembed":
+				// Discord shows provider_name as the embed's top line, a link to provider_url
+				return json_response({
+					version: "1.0",
+					type: "link",
+					provider_name: PROVIDER_NAME,
+					provider_url: url.origin + CREATE_EMBED_PATH,
+				});
+			case "/api/embed":
+				if (!has_expression) return new Response("Missing ?expression=", { status: 400 });
+				return json_response(build_embed(expression));
+			case "/embed":
+				if (has_expression) return html_page(url.origin, build_embed(expression));
 		}
-		const evaluation = evaluate_expression(expression);
-		if ("error" in evaluation) return html_page(`${truncate(expression, 200)} → error`, evaluation.error, "#ED4245");
-		// A result too long for the title goes whole into the description, which allows 4096
-		const title = `${truncate(expression, 200)} = ${evaluation.result}`;
-		if (title.length <= MAX_TITLE_LENGTH) return html_page(title);
-		return html_page(truncate(title, MAX_TITLE_LENGTH), evaluation.result);
+		return html_page(url.origin, {
+			title: SITE_NAME,
+			description: `Usage: ${url.origin}/embed?expression=2%2B2, or create one at ${url.origin}${CREATE_EMBED_PATH}`,
+			color: EMBED_COLOR,
+		});
 	},
 } satisfies ExportedHandler<Env>;
