@@ -12,19 +12,15 @@ separated by `;` (the last one is the result). The functions that could reach ou
 single evaluation (import, createUnit, evaluate, parse, ...) are disabled, following
 https://mathjs.org/docs/expressions/security.html.
 
-Paths:
-   /embed?expression=...       the embed page; Discord builds the embed from its HTML (no
-                               JavaScript runs there), so everything is rendered here
-   /create_embed               a page that previews the embed of a typed expression and gives
-                               the masked link to paste on Discord (src/create_embed.html)
-   /api/embed?expression=...   the embed as JSON, { title, description, color }, for that page
-   /oembed                     the oEmbed JSON every embed page links to; it makes the embed's
-                               top line "Math embed · Create your own", a link to /create_embed
-                               (Open Graph has no way to give that line a link)
-Every other path answers with a short usage page.
+/embed is the only path; every other one redirects there. Its page (src/embed.html) is two
+things at once. Discord builds the embed from the Open Graph tags in its <head> (no JavaScript
+runs there), so the expression is evaluated and rendered here. A browser shows the embed
+creator, filled in with the URL's expression: it previews the embed of a typed expression and
+gives the masked link to paste on Discord. So the embed's title, a link to its own URL, opens
+the creator. Without an expression the page's tags describe the creator itself.
 */
 import { all, create } from "mathjs";
-import create_embed_page from "./create_embed.html";
+import embed_page_template from "./embed.html";
 
 //* math.js with the dangerous functions disabled
 // math.js declares `all` as one entry of a Record, so noUncheckedIndexedAccess adds `| undefined`
@@ -45,9 +41,13 @@ const MAX_TITLE_LENGTH = 256;  // Discord's embed title limit
 const RESULT_PRECISION = 14;
 const EMBED_COLOR = "#5865F2";
 const ERROR_COLOR = "#ED4245";
-const SITE_NAME = "Math embed";
-const PROVIDER_NAME = `${SITE_NAME} · Create your own`;  // the embed's top line
-const CREATE_EMBED_PATH = "/create_embed";
+const SITE_NAME = "Math embed";  // the embed's top line
+const EMBED_PATH = "/embed";
+const CREATOR_EMBED: Embed = {
+	title: "Create your own embedded math",
+	description: "Type an expression, copy the link, paste it on Discord.",
+	color: EMBED_COLOR,
+};
 const CACHE_CONTROL = "public, max-age=86400";
 
 //* Helpers
@@ -91,71 +91,34 @@ function build_embed(expression: string): Embed {
 	if (title.length <= MAX_TITLE_LENGTH) return { title, description: "", color: EMBED_COLOR };
 	return { title: truncate(title, MAX_TITLE_LENGTH), description: evaluation.result, color: EMBED_COLOR };
 }
-function html_response(page: string): Response {
+/** The embed page (src/embed.html) with the <title> and Open Graph tags that carry `embed` into the
+ * Discord embed in place of its embed_meta comment. */
+function embed_page({ title, description, color }: Embed): Response {
+	const meta = [
+		`<title>${escape_html(title)}</title>`,
+		`<meta property="og:site_name" content="${escape_html(SITE_NAME)}">`,
+		`<meta property="og:title" content="${escape_html(title)}">`,
+		...description === "" ? [] : [`<meta property="og:description" content="${escape_html(description)}">`],
+		`<meta name="theme-color" content="${color}">`,
+	].join("\n");
+	// A function as the replacement, so a "$&" in the expression stays as it is
+	const page = embed_page_template.replace("<!--embed_meta-->", () => meta);
 	return new Response(page, {
 		headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": CACHE_CONTROL },
 	});
-}
-function json_response(value: unknown): Response {
-	return new Response(JSON.stringify(value), {
-		headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": CACHE_CONTROL },
-	});
-}
-/** A page whose Open Graph tags carry `embed` into the Discord embed. It links the oEmbed JSON at
- * `origin`/oembed, which gives the embed its top line. */
-function html_page(origin: string, { title, description, color }: Embed): Response {
-	const description_meta = description === "" ? "" : `<meta property="og:description" content="${escape_html(description)}">\n`;
-	return html_response(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>${escape_html(title)}</title>
-<meta property="og:site_name" content="${escape_html(PROVIDER_NAME)}">
-<meta property="og:title" content="${escape_html(title)}">
-${description_meta}<meta name="theme-color" content="${color}">
-<link rel="alternate" type="application/json+oembed" href="${escape_html(origin)}/oembed">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body { font-family: system-ui, sans-serif; max-width: 40em; margin: 3em auto; padding: 0 1em; }
-h1 { font-size: 2em; word-break: break-word; text-align: center }
-</style>
-</head>
-<body>
-<h1>${escape_html(title)}</h1>
-<p>${escape_html(description)}</p>
-<p><a href="${CREATE_EMBED_PATH}">Create your own</a></p>
-</body>
-</html>
-`);
 }
 
 //* Worker entry point
 export default {
 	fetch(request: Request): Response {
 		const url = new URL(request.url);
-		const expression = url.searchParams.get("expression") ?? url.searchParams.get("expr");
-		const has_expression = expression !== null && expression.trim() !== "";
 		switch (url.pathname) {
-			case CREATE_EMBED_PATH:
-				return html_response(create_embed_page);
-			case "/oembed":
-				// Discord shows provider_name as the embed's top line, a link to provider_url
-				return json_response({
-					version: "1.0",
-					type: "link",
-					provider_name: PROVIDER_NAME,
-					provider_url: url.origin + CREATE_EMBED_PATH,
-				});
-			case "/api/embed":
-				if (!has_expression) return new Response("Missing ?expression=", { status: 400 });
-				return json_response(build_embed(expression));
-			case "/embed":
-				if (has_expression) return html_page(url.origin, build_embed(expression));
+			case EMBED_PATH: {
+				const expression = url.searchParams.get("expression") ?? url.searchParams.get("expr");
+				if (expression === null || expression.trim() === "") return embed_page(CREATOR_EMBED);
+				return embed_page(build_embed(expression));
+			}
 		}
-		return html_page(url.origin, {
-			title: SITE_NAME,
-			description: `Usage: ${url.origin}/embed?expression=2%2B2, or create one at ${url.origin}${CREATE_EMBED_PATH}`,
-			color: EMBED_COLOR,
-		});
+		return Response.redirect(url.origin + EMBED_PATH + url.search, 302);
 	},
 } satisfies ExportedHandler<Env>;

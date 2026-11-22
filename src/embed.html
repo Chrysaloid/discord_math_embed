@@ -1,18 +1,16 @@
 <!DOCTYPE html>
 <!--
-The /create_embed page: type an expression, see the Discord embed it gives, copy the markdown
-masked link to paste on Discord. The embed comes from the Worker's /api/embed, so the preview
-shows exactly what /embed puts into the Open Graph tags. Served as it is by src/index.ts,
-which imports this file as text.
+The /embed page, both the embed and its creator. src/index.ts imports this file as text and
+replaces the embed_meta comment with the <title> and Open Graph tags of the URL's expression,
+which Discord turns into the embed (it runs no JavaScript). In a browser the page is the
+creator: type an expression, see the Discord embed it gives, copy the masked link to paste on
+Discord. The preview reads the embed from those same meta tags - the page's own for the URL's
+expression, a fetched /embed page's for a typed one - so it shows exactly what Discord gets.
 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Create your own embedded math</title>
-<meta property="og:site_name" content="Math embed">
-<meta property="og:title" content="Create your own embedded math">
-<meta property="og:description" content="Type an expression, copy the link, paste it on Discord.">
-<meta name="theme-color" content="#5865F2">
+<!--embed_meta-->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 :root {
@@ -120,7 +118,7 @@ footer { margin-top: 3em; font-size: 0.85em; color: #949ba4; }
 <div class="discord_message">
 	<a id="message_link" target="_blank"></a>
 	<div class="discord_embed" id="embed">
-		<div class="discord_embed_provider"><a href="/create_embed">Math embed · Create your own</a></div>
+		<div class="discord_embed_provider" id="embed_provider"></div>
 		<a class="discord_embed_title" id="embed_title" target="_blank"></a>
 		<div class="discord_embed_description" id="embed_description"></div>
 	</div>
@@ -148,6 +146,7 @@ const expression_input = document.getElementById("expression");
 const status_line = document.getElementById("status");
 const message_link = document.getElementById("message_link");
 const embed = document.getElementById("embed");
+const embed_provider = document.getElementById("embed_provider");
 const embed_title = document.getElementById("embed_title");
 const embed_description = document.getElementById("embed_description");
 const markdown = document.getElementById("markdown");
@@ -168,8 +167,19 @@ function escape_discord_markdown(text) {
 	return text.replace(/[\\*_~`|[\]<>:@#]/g, "\\$&");
 }
 //* Showing an embed
-function show_embed(expression, { title, description, color }) {
+/** The embed Discord builds from `page`'s meta tags: { provider, title, description, color }. */
+function read_embed(page) {
+	const meta = selector => page.querySelector(selector)?.content ?? "";
+	return {
+		provider: meta('meta[property="og:site_name"]'),
+		title: meta('meta[property="og:title"]'),
+		description: meta('meta[property="og:description"]'),
+		color: meta('meta[name="theme-color"]'),
+	};
+}
+function show_embed(expression, { provider, title, description, color }) {
 	const url = embed_url(expression);
+	embed_provider.textContent = provider;
 	message_link.textContent = title;
 	message_link.href = url;
 	embed_title.textContent = title;
@@ -180,6 +190,7 @@ function show_embed(expression, { title, description, color }) {
 	copy_button.disabled = false;
 }
 function show_nothing(message) {
+	embed_provider.textContent = "";
 	message_link.textContent = "";
 	embed_title.textContent = "";
 	embed_description.textContent = "";
@@ -188,7 +199,9 @@ function show_nothing(message) {
 	copy_button.disabled = true;
 	status_line.textContent = message;
 }
-async function update() {
+/** Shows the typed expression's embed, read from its /embed page; with `from_this_page`, from this
+ * page's own meta tags, which already hold it. */
+async function update(from_this_page = false) {
 	const expression = expression_input.value;
 	history.replaceState(null, "", expression === "" ? location.pathname : `?expression=${encode_query_value(expression)}`);
 	pending_request?.abort();
@@ -196,12 +209,16 @@ async function update() {
 		show_nothing("Type an expression.");
 		return;
 	}
+	if (from_this_page) {
+		show_embed(expression, read_embed(document));
+		return;
+	}
 	const request = pending_request = new AbortController();
 	status_line.textContent = "Evaluating...";
 	try {
-		const response = await fetch(`/api/embed?expression=${encode_query_value(expression)}`, { signal: request.signal });
+		const response = await fetch(embed_url(expression), { signal: request.signal });
 		if (!response.ok) throw new Error(`the server answered ${response.status} ${response.statusText}`);
-		show_embed(expression, await response.json());
+		show_embed(expression, read_embed(new DOMParser().parseFromString(await response.text(), "text/html")));
 		status_line.textContent = "";
 	} catch (error) {
 		if (error.name !== "AbortError") show_nothing(`Could not evaluate: ${error.message}`);
@@ -217,8 +234,11 @@ copy_button.addEventListener("click", async () => {
 	copy_button.textContent = "Copied";
 	setTimeout(() => { copy_button.textContent = "Copy" }, COPIED_LABEL_MS);
 });
-expression_input.value = new URLSearchParams(location.search).get("expression") ?? DEFAULT_EXPRESSION;
-update();
+//* Start: the URL's expression has its embed in this page already, the default one is fetched
+const url_parameters = new URLSearchParams(location.search);
+const url_expression = url_parameters.get("expression") ?? url_parameters.get("expr") ?? "";
+expression_input.value = url_expression.trim() === "" ? DEFAULT_EXPRESSION : url_expression;
+update(url_expression.trim() !== "");
 </script>
 </body>
 </html>
