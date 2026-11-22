@@ -24,7 +24,8 @@ from this PC too.
 
    node profile_fetch_node.mjs                         # F5 works
    node profile_fetch_node.mjs "factorial(170)" -n 50000 --flame
-esbuild is the global npm install (found through NODE_PATH), and so is speedscope.
+esbuild is the global npm install (found through NODE_PATH), and so is speedscope; f5_argv comes
+from my JavaScript my_libs (Informatyka\JavaScript\my_libs, on NODE_PATH too).
 */
 import { createRequire, SourceMap } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -34,6 +35,9 @@ import path from "node:path";
 import { Session } from "node:inspector/promises";
 import { spawnSync } from "node:child_process";
 import v8 from "node:v8";
+// NODE_PATH serves require() only: it finds my JavaScript my_libs and the global npm packages (esbuild)
+const require = createRequire(import.meta.url);
+const { f5_argv } = require("my_libs/was_run_by_code_runner");
 
 const F5_ARGS = String.raw``;
 
@@ -45,40 +49,6 @@ const WORKER_SOURCE = path.join(PROJECT_FOLDER, "src", "index.ts");
 const USAGE = `usage: node profile_fetch_node.mjs [expression ...] [-n requests] [--warm_up n] [--interval µs] [--top rows] [--flame]
   defaults: ${DEFAULT_EXPRESSIONS.join("  ")}, -n 20000, --warm_up 2000, --interval 100, --top 20`;
 
-// #region //* F5 arguments, as my_libs.was_run_by_code_runner.f5_argv does them in Python
-function split_like_shlex(text) {
-	// Python's shlex in POSIX mode with escapes off: quotes group words, a backslash stays (G:\temp)
-	const words = [];
-	let word = null;
-	let quote = null;
-	for (const character of text) {
-		if (quote) {
-			if (character === quote) quote = null;
-			else word += character;
-		} else if (character === "'" || character === "\"") {
-			quote = character;
-			word ??= "";
-		} else if ((/\s/).test(character)) {
-			if (word !== null) words.push(word);
-			word = null;
-		} else {
-			word = (word ?? "") + character;
-		}
-	}
-	if (quote) throw new Error(`F5_ARGS has an unclosed ${quote}`);
-	if (word !== null) words.push(word);
-	return words;
-}
-function f5_argv(f5_args) {
-	// My Code Runner fork starts the script with WAS_RUN_BY_CODE_RUNNER set; it is taken out of the environment
-	// so processes started from here do not inherit it. F5_ARGS is used only under F5 and only when not blank,
-	// so a leftover cannot affect a run from anywhere else.
-	const was_run_by_code_runner = process.env.WAS_RUN_BY_CODE_RUNNER !== undefined;
-	delete process.env.WAS_RUN_BY_CODE_RUNNER;
-	if (!(was_run_by_code_runner && f5_args.trim())) return process.argv.slice(2);
-	return split_like_shlex(f5_args);
-}
-// #endregion
 /** The options, or null when the arguments are wrong or ask for help (the usage is printed then). */
 function parse_arguments() {
 	let parsed;
@@ -116,8 +86,7 @@ function parse_arguments() {
 }
 //* The Worker, bundled as wrangler bundles it
 async function load_worker() {
-	// esbuild is a global npm install: require() finds it through NODE_PATH, import would not
-	const esbuild = createRequire(import.meta.url)("esbuild");
+	const esbuild = require("esbuild");
 	await esbuild.build({
 		entryPoints: [WORKER_SOURCE],
 		outfile: BUNDLE_PATH,
