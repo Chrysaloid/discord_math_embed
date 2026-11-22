@@ -4,7 +4,9 @@
 	previous run first.
 
 .DESCRIPTION
-	Started from anywhere - F5 in VS Code, Explorer, a shell - it closes every Terminal tab titled
+	Started from anywhere - F5 in VS Code, Explorer, a shell - it first type-checks the Worker
+	(npm run typecheck). On a type error it prints the errors and exits 1 without touching anything, so the
+	previous run's server keeps running. Otherwise it closes every Terminal tab titled
 	"discord_math_embed server" (the one a previous run opened, running or sitting on an error), waits for
 	the port to be free, and reopens itself in a new tab with that title, where it runs
 
@@ -36,6 +38,16 @@ function test_port_listening([int] $port) {
 	$client = [System.Net.Sockets.TcpClient]::new()
 	try { $client.ConnectAsync('127.0.0.1', $port).Wait(300) } catch { $false } finally { $client.Dispose() }
 }
+
+#* Type-check first: wrangler strips the types without checking them
+Push-Location $PSScriptRoot
+try { $output = npm run --silent typecheck 2>&1 } finally { Pop-Location }
+if ($LASTEXITCODE) {
+	$output | Out-Host
+	Write-Host "`nType errors - the server was not (re)started." -ForegroundColor Red
+	exit 1
+}
+Write-Host 'Type check passed.'
 
 #* Close the previous run's tab
 $previous = find_wt_tabs @(get_wt_tabs) "^$([regex]::Escape($TAB_TITLE))$"

@@ -15,8 +15,9 @@ one evaluation disabled. [src/index.ts](src/index.ts)'s header has the details.
     npm install
     wrangler dev            # http://127.0.0.1:8787/embed?expression=2%2B2
 
-or [run_local_server.ps1](run_local_server.ps1) (F5 works), which runs `wrangler dev` in a Windows
-Terminal tab of its own, closes the previous run's tab first, and returns once the server answers.
+or [run_local_server.ps1](run_local_server.ps1) (F5 works), which type-checks first and on a type
+error stops, leaving the previous run's server running; otherwise it closes the previous run's tab,
+runs `wrangler dev` in a Windows Terminal tab of its own, and returns once the server answers.
 
 ## Type-check
 
