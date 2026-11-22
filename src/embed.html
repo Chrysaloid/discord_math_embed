@@ -37,10 +37,25 @@ body {
 	margin: 3em auto;
 	padding: 0 1em;
 }
-h1 { font-size: 2em; text-align: center; }
-h2 { font-size: 1em; font-weight: 600; margin: 2em 0 0.5em; color: #b5bac1; }
-a { color: var(--discord_link); }
-.expression_row { display: flex; align-items: center; gap: 0.6em; font-size: 1.1em; }
+h1 {
+	font-size: 2em;
+	text-align: center;
+}
+h2 {
+	font-size: 1em;
+	font-weight: 600;
+	margin: 2em 0 0.5em;
+	color: #b5bac1;
+}
+a {
+	color: var(--discord_link);
+}
+.expression_row {
+	display: flex;
+	align-items: center;
+	gap: 0.6em;
+	font-size: 1.1em;
+}
 .expression_row input {
 	flex: 1;
 	min-width: 0;
@@ -52,8 +67,16 @@ a { color: var(--discord_link); }
 	border: 1px solid #3f4147;
 	border-radius: 4px;
 }
-.expression_row input:focus { outline: 2px solid #5865f2; outline-offset: -1px; }
-#status { min-height: 1.3em; margin: 0.4em 0 0; font-size: 0.85em; color: #949ba4; }
+.expression_row input:focus {
+	outline: 2px solid #5865f2;
+	outline-offset: -1px;
+}
+#status {
+	min-height: 1.3em;
+	margin: 0.4em 0 0;
+	font-size: 0.85em;
+	color: #949ba4;
+}
 
 /* The Discord mock-up: a message with the masked link, and its embed under it */
 .discord_message {
@@ -65,8 +88,14 @@ a { color: var(--discord_link); }
 	font-size: 16px;
 	line-height: 1.375;
 }
-.discord_message a, .discord_embed_title { color: var(--discord_link); text-decoration: none; }
-.discord_message a:hover { text-decoration: underline; }
+.discord_message a,
+.discord_embed_title {
+	color: var(--discord_link);
+	text-decoration: none;
+}
+.discord_message a:hover {
+	text-decoration: underline;
+}
 .discord_embed {
 	display: grid;
 	gap: 8px;
@@ -75,18 +104,38 @@ a { color: var(--discord_link); }
 	padding: 8px 16px 16px 12px;
 	background: var(--discord_embed_background);
 	border: 1px solid var(--discord_embed_border);
-	border-left: 4px solid var(--embed_color, #5865F2);
+	border-left: 4px solid var(--embed_color, #5865f2);
 	border-radius: 4px;
 	box-sizing: border-box;
 	overflow-wrap: anywhere;
 }
-.discord_embed_provider { margin-top: 8px; font-size: 12px; line-height: 16px; }
-.discord_embed_provider a { color: inherit; }
-.discord_embed_title { font-size: 16px; font-weight: 600; line-height: 22px; }
-.discord_embed_description { font-size: 14px; line-height: 18px; white-space: pre-line; }
-.discord_embed_description:empty { display: none; }
+.discord_embed_provider {
+	margin-top: 8px;
+	font-size: 12px;
+	line-height: 16px;
+}
+.discord_embed_provider a {
+	color: inherit;
+}
+.discord_embed_title {
+	font-size: 16px;
+	font-weight: 600;
+	line-height: 22px;
+}
+.discord_embed_description {
+	font-size: 14px;
+	line-height: 18px;
+	white-space: pre-line;
+}
+.discord_embed_description:empty {
+	display: none;
+}
 
-.markdown_row { display: flex; gap: 0.6em; align-items: stretch; }
+.markdown_row {
+	display: flex;
+	gap: 0.6em;
+	align-items: stretch;
+}
 #markdown {
 	flex: 1;
 	min-width: 0;
@@ -108,9 +157,18 @@ button {
 	border-radius: 4px;
 	cursor: pointer;
 }
-button:hover { background: #4752c4; }
-button:disabled { background: #3f4147; color: #949ba4; cursor: default; }
-footer { margin-top: 3em; font-size: 0.85em; color: #949ba4; }
+button:hover {
+	background: #4752c4;
+}
+button:disabled {
+	background: #3f4147;
+	color: #949ba4;
+	cursor: default;
+}
+footer {
+	margin-top: 3em;
+	color: #949ba4;
+}
 </style>
 </head>
 <body>
