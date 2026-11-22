@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
+    "predeploy": "npm run typecheck",
     "deploy": "wrangler deploy",
     "typecheck": "wrangler types && tsc"
   },

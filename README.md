@@ -31,7 +31,10 @@ anything. Both `wrangler` and `tsc` are the global npm installs.
 ## Deploy
 
     wrangler login          # once, opens the browser for the Cloudflare account
-    wrangler deploy
+    npm run deploy          # type-checks first (predeploy), then wrangler deploy
+
+A bare `wrangler deploy` skips the type check: wrangler strips the types without checking them,
+so it uploads code with type errors too.
 
 On the free plan a request gets 10 ms of CPU time. An expression that needs more (a huge
 matrix, `factorial(100000)`) returns Cloudflare's error page, and Discord shows no embed for it.
