@@ -10,8 +10,15 @@ link's Open Graph tags. Paste the link into Discord and the embed shows the answ
 [math.js](https://mathjs.org/docs/expressions/syntax.html), with the functions that reach outside
 one evaluation disabled. [src/index.ts](src/index.ts)'s header has the details.
 
+The optional `decimals` (a whole number, 0 to 100) rounds the result to that many digits after the
+decimal point, like JavaScript's `toFixed`, every number of a unit, complex number or matrix alike:
+
+    https://discord-math-embed.chrysaloid.workers.dev/embed?expression=1%2F3&decimals=2   ->   "1/3 = 0.33"
+
+Without it the result shows up to 14 significant digits.
+
 Opened in a browser, the same page ([src/embed.html](src/embed.html)) is an embed creator that does
-the encoding for you: type an expression, see a live preview of the Discord embed, and copy the
+the encoding for you: type an expression (and the decimals, if any), see a live preview of the Discord embed, and copy the
 masked link to paste, such as
 `[2+2 = 4](https://discord-math-embed.chrysaloid.workers.dev/embed?expression=2%2B2)`. So clicking an
 embed's title on Discord opens the creator with that expression. Discord reads only the page's meta

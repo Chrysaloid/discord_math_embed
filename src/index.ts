@@ -5,7 +5,11 @@ embed.
 
    https://<worker>.workers.dev/embed?expression=2%2B2   ->  embed titled "2+2 = 4"
 
-`expr` works as a shorter alias of `expression`. The expression is evaluated by math.js
+   https://<worker>.workers.dev/embed?expression=1%2F3&decimals=2   ->  "1/3 = 0.33"
+
+`expr` works as a shorter alias of `expression`. The optional `decimals` (a whole number, 0 to
+100) rounds the result to that many digits after the decimal point, like Number.toFixed; without
+it the result shows up to 14 significant digits. The expression is evaluated by math.js
 (https://mathjs.org/docs/expressions/syntax.html): operators, functions (sqrt, sin, log,
 factorial, ...), constants (pi, e), units (`5 cm to inch`), matrices, several expressions
 separated by `;` (the last one is the result). src/build_embed.ts does that, with the functions
@@ -65,7 +69,7 @@ export default {
 			case EMBED_PATH: {
 				const expression = url.searchParams.get("expression") ?? url.searchParams.get("expr");
 				if (expression === null || expression.trim() === "") return embed_page(CREATOR_EMBED);
-				return embed_page(build_embed(expression));
+				return embed_page(build_embed(expression, url.searchParams.get("decimals")));
 			}
 		}
 		return Response.redirect(url.origin + EMBED_PATH + url.search, 302);
