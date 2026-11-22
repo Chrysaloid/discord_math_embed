@@ -34,21 +34,26 @@ body {
 	background: #111214;
 	color: #e3e5e8;
 	max-width: 46em;
-	margin: 3em auto;
+	margin: 2em auto;
 	padding: 0 1em;
 }
 h1 {
 	font-size: 2em;
 	text-align: center;
+	margin-bottom: 0.5em;
 }
 h2 {
 	font-size: 1em;
-	font-weight: 600;
+	font-weight: bold;
 	margin: 2em 0 0.5em;
 	color: #b5bac1;
 }
 a {
 	color: var(--discord_link);
+}
+.subtext {
+	text-align: center;
+	margin-bottom: 2em;
 }
 .expression_row {
 	display: flex;
@@ -99,6 +104,7 @@ a {
 .discord_embed {
 	display: grid;
 	gap: 8px;
+	width: fit-content;
 	max-width: 432px;
 	margin-top: 4px;
 	padding: 8px 16px 16px 12px;
@@ -173,6 +179,7 @@ footer {
 </head>
 <body>
 <h1>Create your own embedded math</h1>
+<p class="subtext">A quick way to show expresssion value to your friends</p>
 
 <label class="expression_row">Expression:
 	<input id="expression" type="text" spellcheck="false" autocomplete="off" autofocus>
@@ -196,8 +203,8 @@ footer {
 </div>
 
 <footer>
-	Expressions are evaluated by <a href="https://mathjs.org/docs/expressions/syntax.html" target="_blank">math.js</a>:
-	operators, functions (<code>sqrt</code>, <code>sin</code>, <code>log</code>, ...), constants (<code>pi</code>,
+	Expressions are evaluated by <a href="https://mathjs.org/docs/expressions/syntax.html" target="_blank">math.js</a>.
+	It supports operators, functions (<code>sqrt</code>, <code>sin</code>, <code>log</code>, ...), constants (<code>pi</code>,
 	<code>e</code>), units (<code>5 cm to inch</code>), matrices, several expressions separated by <code>;</code>.
 </footer>
 </body>
