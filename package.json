@@ -8,7 +8,9 @@
     "dev": "wrangler dev",
     "predeploy": "npm run typecheck",
     "deploy": "wrangler deploy",
-    "build": "esbuild src/creator.ts --bundle --minify --sourcemap --target=es2022 --outfile=dist/creator.js --log-level=warning",
+    "build": "npm run build:creator && npm run build:page",
+    "build:creator": "esbuild src/creator.ts --bundle --minify --sourcemap --target=es2022 --outfile=dist/creator.js --log-level=warning",
+    "build:page": "html-minifier-terser --input-dir src --output-dir build --file-ext html --collapse-whitespace --remove-comments --ignore-custom-comments \"^embed_meta$\" --minify-css true",
     "typecheck": "wrangler types && tsc && tsc -p tsconfig.creator.json"
   },
   "dependencies": {

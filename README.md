@@ -26,11 +26,17 @@ CPU limit (see Deploy), the creator warns when an expression took longer than th
 
 ## Build
 
-    npm run build           # esbuild src/creator.ts -> dist/creator.js
+    npm run build           # both of these:
+    npm run build:creator   # esbuild src/creator.ts -> dist/creator.js
+    npm run build:page      # html-minifier-terser src/embed.html -> build/embed.html
+
+`build:page` drops every comment but `<!--embed_meta-->` (where the Worker puts the meta tags),
+collapses the whitespace and minifies the inline CSS; the Worker imports that copy, so
+`src/embed.html` keeps its comments and layout. Both outputs are git-ignored.
 
 wrangler runs it by itself (`[build]` in [wrangler.toml](wrangler.toml)) before `wrangler dev`,
 `wrangler deploy` and `wrangler types`, and again in `wrangler dev` when something in `src/` changes,
-so it rarely needs running by hand. `esbuild` is the global npm install.
+so it rarely needs running by hand. `esbuild` and `html-minifier-terser` are global npm installs.
 
 ## Run locally
 

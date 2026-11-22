@@ -1,6 +1,7 @@
 node_modules/
 .wrangler/
 dist/
+build/
 profiles/
 __pycache__/
 .dev.vars

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <!--
-The /embed page, both the embed and its creator. src/index.ts imports this file as text and
-replaces the embed_meta comment with the <title> and Open Graph tags of the URL's expression,
+The /embed page, both the embed and its creator. `npm run build:page` minifies it into
+build/embed.html, dropping every comment but embed_meta; src/index.ts imports that copy as text
+and replaces the embed_meta comment with the <title> and Open Graph tags of the URL's expression,
 which Discord turns into the embed (it runs no JavaScript). In a browser the page is the
 creator: type an expression, see the Discord embed it gives, copy the masked link to paste on
 Discord. /creator.js (src/creator.ts, bundled with math.js) evaluates the expression in the

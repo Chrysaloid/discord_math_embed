@@ -13,7 +13,8 @@ that could reach outside one evaluation disabled.
 
 /embed is the only path the Worker answers; every other one redirects there, except the files of
 dist/ (the creator's script), which Cloudflare serves as static assets without running the Worker.
-The /embed page (src/embed.html) is two things at once. Discord builds the embed from the Open
+The /embed page (src/embed.html, imported minified from build/embed.html, which `npm run build`
+makes before wrangler bundles) is two things at once. Discord builds the embed from the Open
 Graph tags in its <head> (no JavaScript runs there), so the expression is evaluated and rendered
 here. A browser shows the embed creator, filled in with the URL's expression: it previews the
 embed of a typed expression and gives the masked link to paste on Discord, all in the browser
@@ -21,7 +22,7 @@ embed of a typed expression and gives the masked link to paste on Discord, all i
 opens the creator. Without an expression the page's tags describe the creator itself.
 */
 import { build_embed, type Embed, EMBED_COLOR, SITE_NAME } from "./build_embed";
-import embed_page_template from "./embed.html";
+import embed_page_template from "../build/embed.html";
 
 //* Settings
 const EMBED_PATH = "/embed";
@@ -39,7 +40,7 @@ const HTML_ESCAPES: Readonly<Record<string, string>> = {
 function escape_html(text: string): string {
 	return text.replace(/[&<>"']/g, character => HTML_ESCAPES[character] ?? character);
 }
-/** The embed page (src/embed.html) with the <title> and Open Graph tags that carry `embed` into the
+/** The embed page (src/embed.html, minified) with the <title> and Open Graph tags that carry `embed` into the
  * Discord embed in place of its embed_meta comment. */
 function embed_page({ title, description, color }: Embed): Response {
 	const meta = [
@@ -48,7 +49,7 @@ function embed_page({ title, description, color }: Embed): Response {
 		`<meta property="og:title" content="${escape_html(title)}">`,
 		...description === "" ? [] : [`<meta property="og:description" content="${escape_html(description)}">`],
 		`<meta name="theme-color" content="${color}">`,
-	].join("\n");
+	].join("");  // no whitespace, like the minified page around them
 	// A function as the replacement, so a "$&" in the expression stays as it is
 	const page = embed_page_template.replace("<!--embed_meta-->", () => meta);
 	return new Response(page, {

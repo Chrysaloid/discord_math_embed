@@ -5,7 +5,8 @@ the Worker's code run in Node.
 workerd cannot time it: Workers freeze performance.now() while code runs, and workerd's sampler on
 Windows takes about one sample per 15 ms (profile_fetch.py, which profiles the real runtime, gives
 shares only for that reason). Node has neither problem, so this bundles src/index.ts with esbuild the
-way wrangler does (the .html as text, the workerd/worker/browser package conditions) into
+way wrangler does (the .html as text, the workerd/worker/browser package conditions; the page
+minified first by `npm run build:page`) into
 profiles/node_bundle/, imports it, and calls its fetch() in a loop - no server, no HTTP:
    - the first call alone (math.js builds each function on first use, V8 has optimized nothing yet),
    - --warm_up calls unmeasured,
@@ -86,6 +87,9 @@ function parse_arguments() {
 }
 //* The Worker, bundled as wrangler bundles it
 async function load_worker() {
+	// src/index.ts imports the minified page, build/embed.html, which wrangler's [build] makes otherwise
+	const page_build = spawnSync("npm run build:page", { cwd: PROJECT_FOLDER, stdio: "inherit", shell: true });
+	if (page_build.status !== 0) throw new Error("npm run build:page failed");
 	const esbuild = require("esbuild");
 	await esbuild.build({
 		entryPoints: [WORKER_SOURCE],
