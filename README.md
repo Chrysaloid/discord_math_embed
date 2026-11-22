@@ -1,4 +1,4 @@
-# discord_math_embed
+# [discord_math_embed](https://discord-math-embed.chrysaloid.workers.dev/embed?expression=2%2B2)
 
 A Cloudflare Worker that works out a math expression from the URL and puts the result in the
 link's Open Graph tags. Paste the link into Discord and the embed shows the answer:
