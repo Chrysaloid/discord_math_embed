@@ -16,6 +16,7 @@ samples are therefore not CPU time, so every sample counts as one, and a share o
 inside fetch() is a share of fetch's CPU time. That takes thousands of requests for a few hundred
 samples; the share of a function seen in n samples is good to about +-100/sqrt(n) %. The only
 milliseconds printed are the client's wall-clock time per request, HTTP included.
+profile_fetch_node.mjs gives milliseconds, by running the Worker's code in Node instead.
 
 Printed, for each expression:
    - how many samples fell inside fetch(), and where the rest went (GC, idle, workerd's own code)

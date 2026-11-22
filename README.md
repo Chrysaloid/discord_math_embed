@@ -54,6 +54,15 @@ source-mapped, to `profiles/` (git-ignored); `--flame` opens it as a flame graph
 global npm install). Its docstring explains why it reports shares of samples and not milliseconds:
 workerd's sampler on Windows takes only about one sample per 15 ms of busy time.
 
+    node profile_fetch_node.mjs             # no server needed; F5 works
+    node profile_fetch_node.mjs "factorial(170)" -n 50000 --flame
+
+[profile_fetch_node.mjs](profile_fetch_node.mjs) gives milliseconds instead: it bundles the Worker
+with esbuild as wrangler does, calls its `fetch()` in Node tens of thousands of times, times each
+call with `performance.now()`, and turns the CPU profile's shares into milliseconds per call. It
+also times the first, cold call. Node is not workerd (another V8, its own `Request`/`Response`), so
+the math.js and `src/` parts carry over best; its docstring has the details.
+
 ## Type-check
 
 The Worker is TypeScript, which wrangler bundles as it is; nothing compiles it to JavaScript.
