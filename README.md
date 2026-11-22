@@ -15,6 +15,9 @@ one evaluation disabled. [src/index.js](src/index.js)'s header has the details.
     npm install
     wrangler dev            # http://127.0.0.1:8787/embed?expression=2%2B2
 
+or [run_local_server.ps1](run_local_server.ps1) (F5 works), which runs `wrangler dev` in a Windows
+Terminal tab of its own, closes the previous run's tab first, and returns once the server answers.
+
 ## Deploy
 
     wrangler login          # once, opens the browser for the Cloudflare account
