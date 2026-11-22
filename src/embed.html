@@ -19,6 +19,11 @@ per keystroke.
 reads on a light and a dark tab bar alike. Inlined, so the browser does not ask the Worker for
 /favicon.ico. -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960' fill='%235865f2'><path d='M320-240h60v-80h80v-60h-80v-80h-60v80h-80v60h80v80Zm200-30h200v-60H520v60Zm0-100h200v-60H520v60Zm44-152 56-56 56 56 42-42-56-58 56-56-42-42-56 56-56-56-42 42 56 56-56 58 42 42Zm-314-70h200v-60H250v60Zm-50 472q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-560H200v560Zm0-560v560-560Z'/></svg>">
+<!-- The page's own font; the input and the markdown keep a monospace font, and the Discord
+mock-up keeps Discord's. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@400;700&display=swap">
 <style>
 :root {
 	color-scheme: dark;
@@ -30,7 +35,7 @@ reads on a light and a dark tab bar alike. Inlined, so the browser does not ask 
 	--discord_link: #2781e7;
 }
 body {
-	font-family: system-ui, sans-serif;
+	font-family: "IBM Plex Sans Condensed", system-ui, sans-serif;
 	background: #111214;
 	color: #e3e5e8;
 	max-width: 46em;
