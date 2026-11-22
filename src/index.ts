@@ -18,9 +18,10 @@ the server sends (no JavaScript runs), so everything is rendered here.
 import { all, create } from "mathjs";
 
 //* math.js with the dangerous functions disabled
-const math = create(all);
+// math.js declares `all` as one entry of a Record, so noUncheckedIndexedAccess adds `| undefined`
+const math = create(all!);
 const limited_evaluate = math.evaluate;
-function disabled(name) {
+function disabled(name: string): () => never {
 	return () => { throw new Error(`Function ${name} is disabled`) };
 }
 math.import(Object.fromEntries(
@@ -37,32 +38,34 @@ const EMBED_COLOR = "#5865F2";
 const SITE_NAME = "Math embed";
 
 //* Helpers
-function escape_html(text) {
-	return String(text).replace(/[&<>"']/g, character => ({
-		"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
-	})[character]);
+const HTML_ESCAPES: Readonly<Record<string, string>> = {
+	"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+};
+function escape_html(text: string): string {
+	return text.replace(/[&<>"']/g, character => HTML_ESCAPES[character] ?? character);
 }
-function truncate(text, max_length) {
+function truncate(text: string, max_length: number): string {
 	return text.length <= max_length ? text : text.slice(0, max_length - 1) + "…";
 }
+type Evaluation = { result: string } | { error: string };
 /** Evaluates `expression`; returns `{ result }` or `{ error }`, never throws. */
-function evaluate_expression(expression) {
+function evaluate_expression(expression: string): Evaluation {
 	if (expression.length > MAX_EXPRESSION_LENGTH) {
 		return { error: `Expression longer than ${MAX_EXPRESSION_LENGTH} characters` };
 	}
 	try {
-		let value = limited_evaluate(expression);
+		let value: unknown = limited_evaluate(expression);
 		if (math.isResultSet(value)) value = value.entries.at(-1);
 		if (value === undefined) return { error: "The expression has no result" };
 		if (typeof value === "function") return { error: "The result is a function" };
 		return { result: truncate(math.format(value, { precision: RESULT_PRECISION }), MAX_RESULT_LENGTH) };
 	} catch (exception) {
-		return { error: exception.message };
+		return { error: exception instanceof Error ? exception.message : String(exception) };
 	}
 }
 /** A page whose Open Graph tags carry `title` and `description` (left out when empty) into the
  * Discord embed, with `color` as the embed's side bar. */
-function html_page(title, description = "", color = EMBED_COLOR) {
+function html_page(title: string, description = "", color = EMBED_COLOR): Response {
 	const description_meta = description === "" ? "" : `<meta property="og:description" content="${escape_html(description)}">\n`;
 	const page = `<!DOCTYPE html>
 <html lang="en">
@@ -94,17 +97,17 @@ h1 { font-size: 2em; word-break: break-word; text-align: center }
 
 //* Worker entry point
 export default {
-	fetch(request) {
+	fetch(request: Request): Response {
 		const url = new URL(request.url);
 		const expression = url.searchParams.get("expression") ?? url.searchParams.get("expr");
 		if (url.pathname !== "/embed" || expression === null || expression.trim() === "") {
 			return html_page(SITE_NAME, `Usage: ${url.origin}/embed?expression=2%2B2`);
 		}
-		const { result, error } = evaluate_expression(expression);
-		if (error) return html_page(`${truncate(expression, 200)} → error`, error, "#ED4245");
+		const evaluation = evaluate_expression(expression);
+		if ("error" in evaluation) return html_page(`${truncate(expression, 200)} → error`, evaluation.error, "#ED4245");
 		// A result too long for the title goes whole into the description, which allows 4096
-		const title = `${truncate(expression, 200)} = ${result}`;
+		const title = `${truncate(expression, 200)} = ${evaluation.result}`;
 		if (title.length <= MAX_TITLE_LENGTH) return html_page(title);
-		return html_page(truncate(title, MAX_TITLE_LENGTH), result);
+		return html_page(truncate(title, MAX_TITLE_LENGTH), evaluation.result);
 	},
-};
+} satisfies ExportedHandler<Env>;

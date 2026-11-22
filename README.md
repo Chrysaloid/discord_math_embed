@@ -8,7 +8,7 @@ link's Open Graph tags. Paste the link into Discord and the embed shows the answ
 `expr` is accepted as a shorter name for `expression`. The expression must be URL-encoded
 (`+` is `%2B`, `/` is `%2F`, `^` is `%5E`, a space is `%20`). It is evaluated by
 [math.js](https://mathjs.org/docs/expressions/syntax.html), with the functions that reach outside
-one evaluation disabled. [src/index.js](src/index.js)'s header has the details.
+one evaluation disabled. [src/index.ts](src/index.ts)'s header has the details.
 
 ## Run locally
 
@@ -17,6 +17,16 @@ one evaluation disabled. [src/index.js](src/index.js)'s header has the details.
 
 or [run_local_server.ps1](run_local_server.ps1) (F5 works), which runs `wrangler dev` in a Windows
 Terminal tab of its own, closes the previous run's tab first, and returns once the server answers.
+
+## Type-check
+
+The Worker is TypeScript, which wrangler bundles as it is; nothing compiles it to JavaScript.
+
+    npm run typecheck       # wrangler types && tsc
+
+`wrangler types` writes `worker-configuration.d.ts` (the Workers runtime types and `Env`, from
+`wrangler.toml`; git-ignored, since it is generated), and `tsc` checks against it without emitting
+anything. Both `wrangler` and `tsc` are the global npm installs.
 
 ## Deploy
 

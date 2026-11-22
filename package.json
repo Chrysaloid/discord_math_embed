@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "typecheck": "wrangler types && tsc"
   },
   "dependencies": {
     "mathjs": "^15.2.0"
