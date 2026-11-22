@@ -1,31 +1,31 @@
 /**
- * discord_math_embed - a Cloudflare Worker that evaluates a math expression from the URL and
- * returns it as Open Graph meta tags, so a link pasted into Discord shows the result in its
- * embed.
- *
- *    https://<worker>.workers.dev/embed?expression=2%2B2   ->  embed titled "2+2 = 4"
- *
- * `expr` works as a shorter alias of `expression`. The expression is evaluated by math.js
- * (https://mathjs.org/docs/expressions/syntax.html): operators, functions (sqrt, sin, log,
- * factorial, ...), constants (pi, e), units (`5 cm to inch`), matrices, several expressions
- * separated by `;` (the last one is the result). The functions that could reach outside a
- * single evaluation (import, createUnit, evaluate, parse, ...) are disabled, following
- * https://mathjs.org/docs/expressions/security.html.
- *
- * Every other path answers with a short usage page. Discord builds the embed from the HTML
- * the server sends (no JavaScript runs), so everything is rendered here.
- */
-import { create, all } from "mathjs";
+discord_math_embed - a Cloudflare Worker that evaluates a math expression from the URL and
+returns it as Open Graph meta tags, so a link pasted into Discord shows the result in its
+embed.
+
+   https://<worker>.workers.dev/embed?expression=2%2B2   ->  embed titled "2+2 = 4"
+
+`expr` works as a shorter alias of `expression`. The expression is evaluated by math.js
+(https://mathjs.org/docs/expressions/syntax.html): operators, functions (sqrt, sin, log,
+factorial, ...), constants (pi, e), units (`5 cm to inch`), matrices, several expressions
+separated by `;` (the last one is the result). The functions that could reach outside a
+single evaluation (import, createUnit, evaluate, parse, ...) are disabled, following
+https://mathjs.org/docs/expressions/security.html.
+
+Every other path answers with a short usage page. Discord builds the embed from the HTML
+the server sends (no JavaScript runs), so everything is rendered here.
+*/
+import { all, create } from "mathjs";
 
 //* math.js with the dangerous functions disabled
 const math = create(all);
 const limited_evaluate = math.evaluate;
 function disabled(name) {
-	return () => { throw new Error(`Function ${name} is disabled`); };
+	return () => { throw new Error(`Function ${name} is disabled`) };
 }
 math.import(Object.fromEntries(
 	["import", "createUnit", "reviver", "evaluate", "parse", "simplify", "derivative", "resolve", "compile"]
-		.map(name => [name, disabled(name)])
+	.map(name => [name, disabled(name)])
 ), { override: true });
 
 //* Settings
@@ -39,7 +39,7 @@ const SITE_NAME = "Math embed";
 //* Helpers
 function escape_html(text) {
 	return String(text).replace(/[&<>"']/g, character => ({
-		"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+		"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
 	})[character]);
 }
 function truncate(text, max_length) {
@@ -63,8 +63,7 @@ function evaluate_expression(expression) {
 /** A page whose Open Graph tags carry `title` and `description` (left out when empty) into the
  * Discord embed, with `color` as the embed's side bar. */
 function html_page(title, description = "", color = EMBED_COLOR) {
-	const description_meta = description === "" ? ""
-		: `<meta property="og:description" content="${escape_html(description)}">\n`;
+	const description_meta = description === "" ? "" : `<meta property="og:description" content="${escape_html(description)}">\n`;
 	const page = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -76,7 +75,7 @@ ${description_meta}<meta name="theme-color" content="${color}">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 body { font-family: system-ui, sans-serif; max-width: 40em; margin: 3em auto; padding: 0 1em; }
-h1 { font-size: 2em; word-break: break-word; }
+h1 { font-size: 2em; word-break: break-word; text-align: center }
 </style>
 </head>
 <body>
@@ -88,8 +87,8 @@ h1 { font-size: 2em; word-break: break-word; }
 	return new Response(page, {
 		headers: {
 			"Content-Type": "text/html; charset=utf-8",
-			"Cache-Control": "public, max-age=86400"
-		}
+			"Cache-Control": "public, max-age=86400",
+		},
 	});
 }
 
@@ -102,12 +101,10 @@ export default {
 			return html_page(SITE_NAME, `Usage: ${url.origin}/embed?expression=2%2B2`);
 		}
 		const { result, error } = evaluate_expression(expression);
-		if (error !== undefined) {
-			return html_page(`${truncate(expression, 200)} → error`, error, "#ED4245");
-		}
+		if (error) return html_page(`${truncate(expression, 200)} → error`, error, "#ED4245");
 		// A result too long for the title goes whole into the description, which allows 4096
 		const title = `${truncate(expression, 200)} = ${result}`;
 		if (title.length <= MAX_TITLE_LENGTH) return html_page(title);
 		return html_page(truncate(title, MAX_TITLE_LENGTH), result);
-	}
+	},
 };
