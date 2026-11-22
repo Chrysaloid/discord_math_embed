@@ -1,7 +1,8 @@
 /**
 The embed creator of the /embed page (src/embed.html): type an expression, and the decimals to round
 its result to if any, see the Discord embed it gives, copy the markdown masked link to paste on
-Discord. Both go into the page's URL and the link, as `expression` and `decimals`. Everything runs in the browser: the embed
+Discord. Both go into the page's URL and the link, as `expression` and `decimals`. The decimals field
+drops anything typed into it but digits and "e"; the expression field is trimmed as it is typed. Everything runs in the browser: the embed
 comes from src/build_embed.ts, the same code the Worker puts into the Open Graph tags, so the
 preview is what Discord gets and typing makes no requests.
 
@@ -71,15 +72,15 @@ function show_nothing(): void {
 	markdown.textContent = "";
 	copy_button.disabled = true;
 }
-/** Shows the typed expression's embed, rounded to the typed decimals, and puts both into the page's
+/** Shows the typed expression's embed, formatted by the typed decimals, and puts both into the page's
  * URL. An expression that took longer than the Worker's CPU limit here gets a warning, as Discord
  * may get no embed. */
 function update(): void {
-	const expression = expression_input.value;
+	const expression = expression_input.value.trim();
 	const decimals = decimals_input.value;
 	const query = embed_query(expression, decimals);
 	history.replaceState(null, "", expression === "" ? location.pathname : query);
-	if (expression.trim() === "") {
+	if (expression === "") {
 		show_nothing();
 		status_line.textContent = "Type an expression.";
 		return;
@@ -91,9 +92,37 @@ function update(): void {
 	status_line.textContent = elapsed_ms <= WORKER_CPU_LIMIT_MS ? "" :
 		`This took ${Math.round(elapsed_ms)} ms to evaluate here. The server gets ${WORKER_CPU_LIMIT_MS} ms, so Discord may show no embed for it.`;
 }
+//* Cleaning the inputs as they are typed
+/** Sets `input`'s value to `value` with the caret at `caret`; leaves it alone when it already is
+ * `value`, as setting it moves the caret to the end and clears the field's undo history. */
+function replace_value(input: HTMLInputElement, value: string, caret: number): void {
+	if (input.value === value) return;
+	input.value = value;
+	input.setSelectionRange(caret, caret);
+}
+/** What the decimals field keeps of `text`: digits and "e", lowercased. */
+function decimals_characters(text: string): string {
+	return text.toLowerCase().replace(/[^\de]/g, "");
+}
+function clean_decimals(): void {
+	const { value, selectionStart } = decimals_input;
+	const before_caret = value.slice(0, selectionStart ?? value.length);
+	replace_value(decimals_input, decimals_characters(value), decimals_characters(before_caret).length);
+}
+/** Trims the expression field. Whitespace at its end stays while the caret is right after it, unless
+ * `trim_end`, or a space could never be typed before the next word; leaving the field trims it. */
+function clean_expression(trim_end: boolean): void {
+	const { value, selectionStart } = expression_input;
+	const caret = selectionStart ?? value.length;
+	const trimmed_start = value.trimStart();
+	const cleaned = trim_end || caret < value.length ? trimmed_start.trimEnd() : trimmed_start;
+	const caret_after = caret - (value.length - trimmed_start.length);
+	replace_value(expression_input, cleaned, Math.max(0, Math.min(caret_after, cleaned.length)));
+}
 //* Events
-expression_input.addEventListener("input", update);
-decimals_input.addEventListener("input", update);
+expression_input.addEventListener("input", () => { clean_expression(false); update() });
+expression_input.addEventListener("change", () => clean_expression(true));  // update() already trims
+decimals_input.addEventListener("input", () => { clean_decimals(); update() });
 copy_button.addEventListener("click", async () => {
 	await navigator.clipboard.writeText(markdown.textContent);
 	copy_button.textContent = "Copied";
@@ -102,7 +131,8 @@ copy_button.addEventListener("click", async () => {
 //* Start
 build_embed("1+1");  // warms math.js up, so the first timed evaluation is not slowed by it
 const url_parameters = new URLSearchParams(location.search);
-const url_expression = url_parameters.get("expression") ?? url_parameters.get("expr") ?? "";
-expression_input.value = url_expression.trim() === "" ? DEFAULT_EXPRESSION : url_expression;
+const url_expression = (url_parameters.get("expression") ?? url_parameters.get("expr") ?? "").trim();
+expression_input.value = url_expression === "" ? DEFAULT_EXPRESSION : url_expression;
+// As it is, not cleaned: an invalid value shows the error Discord gets for this URL
 decimals_input.value = url_parameters.get("decimals") ?? "";
 update();

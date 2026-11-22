@@ -85,7 +85,7 @@ code {
 	border-radius: 4px;
 }
 #decimals {
-	flex: 0 0 3.5em;
+	flex: 0 0 4.5em;
 	text-align: center;
 }
 .expression_row input:focus {
@@ -197,14 +197,15 @@ footer {
 <h1>Create your own embedded math</h1>
 <p class="subtext">A quick way to show expresssion value to your friends</p>
 
-<!-- Decimals is text, not type="number": a number field empties a value it cannot parse (such as a
-URL's decimals=abc), and the preview would then hide the error Discord shows. -->
+<!-- Decimals is plain text: a number field would refuse the "e" and empty a value it cannot parse
+(such as a URL's decimals=abc), where the preview should show the error Discord shows, and
+inputmode="numeric" would give phones a keypad with no "e". -->
 <div class="expression_row">
 	<label for="expression">Expression:</label>
 	<input id="expression" type="text" spellcheck="false" autocomplete="off" autofocus>
 	<label for="decimals">Decimals:</label>
-	<input id="decimals" type="text" inputmode="numeric" spellcheck="false" autocomplete="off" placeholder="any"
-		title="Digits after the decimal point, 0 to 100; empty shows up to 14 significant digits">
+	<input id="decimals" type="text" spellcheck="false" autocomplete="off" placeholder="empty"
+		title="Digits after the decimal point, 0 to 100; with an e before or after them (3e, e3) or a lone e, scientific notation; empty shows up to 14 significant digits">
 </div>
 <p id="status"></p>
 
@@ -228,7 +229,10 @@ URL's decimals=abc), and the preview would then hide the error Discord shows. --
 	Expressions are evaluated by <a href="https://mathjs.org/docs/expressions/syntax.html" target="_blank">math.js</a>.
 	It supports operators, functions (<code>sqrt</code>, <code>sin</code>, <code>log</code>, ...), constants (<code>pi</code>,
 	<code>e</code>), units (<code>5 cm to inch</code>), matrices, several expressions separated by <code>;</code>.
-	Decimals rounds the result to that many digits after the decimal point, like <code>toFixed</code>.
+	Decimals rounds the result to that many digits after the decimal point, like <code>toFixed</code>; with an
+	<code>e</code> before or after the number (<code>3e</code>, <code>e3</code>) it shows scientific notation,
+	like <code>toExponential</code> but compact (<code>1e3</code>), and a lone <code>e</code> shows it with up to 14
+	significant digits.
 </footer>
 </body>
 </html>
