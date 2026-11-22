@@ -67,14 +67,29 @@ code {
 	text-align: center;
 	margin-bottom: 2em;
 }
-.expression_row {
+/* On a narrow screen the row breaks in two steps: the decimals move to a line of their own once the
+expression's label and input together would get less than 22em, and then the expression's input goes
+under its label once it alone would get less than 15em. */
+.expression_row,
+.expression_field,
+.decimals_field {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
-	gap: 0.6em;
+	gap: 0.4em 0.6em;
+}
+.expression_row {
 	font-size: 1.1em;
 }
+.expression_field {
+	flex: 1 1 22em;
+	min-width: 0;
+}
+.decimals_field {
+	flex: none;
+}
 .expression_row input {
-	flex: 1;
+	flex: 1 1 15em;
 	min-width: 0;
 	font: inherit;
 	font-family: ui-monospace, Consolas, monospace;
@@ -201,11 +216,15 @@ footer {
 (such as a URL's decimals=abc), where the preview should show the error Discord shows, and
 inputmode="numeric" would give phones a keypad with no "e". -->
 <div class="expression_row">
-	<label for="expression">Expression:</label>
-	<input id="expression" type="text" spellcheck="false" autocomplete="off" autofocus>
-	<label for="decimals">Decimals:</label>
-	<input id="decimals" type="text" spellcheck="false" autocomplete="off" placeholder="empty"
-		title="Digits after the decimal point, 0 to 100; with an e before or after them (3e, e3) or a lone e, scientific notation; empty shows up to 14 significant digits">
+	<div class="expression_field">
+		<label for="expression">Expression:</label>
+		<input id="expression" type="text" spellcheck="false" autocomplete="off" autofocus>
+	</div>
+	<div class="decimals_field">
+		<label for="decimals">Decimals:</label>
+		<input id="decimals" type="text" spellcheck="false" autocomplete="off" placeholder="empty"
+			title="Digits after the decimal point, 0 to 100; with an e before or after them (3e, e3) or a lone e, scientific notation; empty shows up to 14 significant digits">
+	</div>
 </div>
 <p id="status"></p>
 
