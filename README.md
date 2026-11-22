@@ -89,6 +89,13 @@ anything. The browser side, [src/creator.ts](src/creator.ts), needs the DOM type
 A bare `wrangler deploy` skips the type check: wrangler strips the types without checking them,
 so it uploads code with type errors too.
 
+Or [deploy_to_cloudflare.ps1](deploy_to_cloudflare.ps1) (F5 works), which checks more before it
+uploads anything: the tools are on PATH, git has no uncommitted changes, `npm ls` passes, wrangler
+is logged in, the types check and eslint reports nothing. It deploys with the commit as the
+version's message, then checks the live Worker: `/embed?expression=2%2B2` must have the title
+`2+2 = 4` and `/creator.js` must be served. `-dry_run` stops at `wrangler deploy --dry-run`;
+`-allow_dirty` deploys uncommitted changes too.
+
 On the free plan a request gets 10 ms of CPU time. An expression that needs more (a huge
 matrix, `factorial(100000)`) returns Cloudflare's error page, and Discord shows no embed for it.
 Discord caches an embed per URL, so changing the Worker does not update links already posted.
