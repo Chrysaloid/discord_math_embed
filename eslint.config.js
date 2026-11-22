@@ -5,7 +5,7 @@ import shared_config from "../../../eslint.config.js";
 
 export default [
 	{
-		ignores: [".wrangler/", "dist/", "worker-configuration.d.ts"],
+		ignores: [".wrangler/", "dist/", "build/", "profiles/", "worker-configuration.d.ts"],
 	},
 	...shared_config,
 	{
