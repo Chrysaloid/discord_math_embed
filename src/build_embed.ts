@@ -9,12 +9,16 @@ The expression is evaluated by math.js (https://mathjs.org/docs/expressions/synt
 functions that could reach outside a single evaluation (import, createUnit, evaluate, parse, ...)
 are disabled, following https://mathjs.org/docs/expressions/security.html.
 
-The result shows up to 14 significant digits, or, given `decimals` (the URL's `decimals` parameter),
-exactly that many digits after the decimal point, like Number.toFixed: math.js's "fixed" notation,
-which rounds in decimal (1.005 -> 1.01, where toFixed gives 1.00), never switches to an exponent and
-applies to every number inside a unit, a complex number or a matrix as well.
+The result shows up to 14 significant digits; the URL's `decimals` parameter changes that, for every
+number inside a unit, a complex number or a matrix as well:
+- `3` - exactly 3 digits after the decimal point, like Number.toFixed(3): math.js's "fixed" notation,
+  which rounds in decimal (1.005 -> 1.01, where toFixed gives 1.00) and never switches to an exponent.
+- `3e` or `e3` - scientific notation rounded to 3 digits after the point, like
+  Number.toExponential(3), but compact: no trailing zeros and no "+" (1000 -> 1e3, 1234.5678 ->
+  1.235e3, 0.00012345 -> 1.235e-4).
+- `e` - scientific notation with up to 14 significant digits, as compact.
 */
-import { all, create, type FormatOptions } from "mathjs";
+import { all, type BigNumber, create, type FormatOptions } from "mathjs";
 
 //* math.js with the dangerous functions disabled
 // math.js declares `all` as one entry of a Record, so noUncheckedIndexedAccess adds `| undefined`
@@ -33,7 +37,7 @@ const MAX_EXPRESSION_LENGTH = 500;
 const MAX_RESULT_LENGTH = 1000;
 const MAX_TITLE_LENGTH = 256;  // Discord's embed title limit
 const RESULT_PRECISION = 14;
-const MAX_DECIMALS = 100;  // as Number.toFixed allows
+const MAX_DECIMALS = 100;  // as Number.toFixed and toExponential allow
 export const EMBED_COLOR = "#5865F2";
 const ERROR_COLOR = "#ED4245";
 export const SITE_NAME = "Math embed";  // the embed's top line
@@ -43,16 +47,31 @@ function truncate(text: string, max_length: number): string {
 	return text.length <= max_length ? text : text.slice(0, max_length - 1) + "…";
 }
 type Evaluation = { result: string } | { error: string };
-const WHOLE_NUMBER = /^\s*\d+\s*$/;
-/** The format options of `decimals`: the URL's text of a whole number from 0 to MAX_DECIMALS, or
- * null or blank for RESULT_PRECISION significant digits; a string for anything else, the error. */
-function format_options(decimals: string | null): FormatOptions | string {
-	if (decimals === null || decimals.trim() === "") return { precision: RESULT_PRECISION };
-	const count = Number(decimals);
-	if (!WHOLE_NUMBER.test(decimals) || count > MAX_DECIMALS) {
-		return `Decimals must be a whole number from 0 to ${MAX_DECIMALS}`;
+/** A count of digits, with an "e" before or after it for scientific notation, or a lone "e". */
+const DECIMALS_FORMAT = /^(?:\d+|\d*e|e\d+)$/;
+/** The mantissa's trailing zeros (and its point if nothing is left after it), and the exponent's "+". */
+const EXPONENTIAL_PADDING = /(?:\.(\d*?))?0*e\+?(-?\d+)$/;
+/** `number` in math.js's exponential notation with `precision` significant digits, made compact:
+ * 1.000e+3 -> 1e3, 1.230e-4 -> 1.23e-4. */
+function compact_exponential(number: number | BigNumber, precision: number): string {
+	return math.format(number, { notation: "exponential", precision }).replace(EXPONENTIAL_PADDING,
+		(_, fraction: string | undefined, exponent: string) => `${fraction ? "." + fraction : ""}e${exponent}`);
+}
+/** How `decimals`, the URL's text (case and surrounding spaces ignored), formats a result (see the
+ * module docstring): math.js format options or a function that formats each number; null or blank
+ * for RESULT_PRECISION significant digits; a string for text that is not a valid `decimals`, the
+ * error. */
+function format_options(decimals: string | null): FormatOptions | ((number: number | BigNumber) => string) | string {
+	const text = decimals?.trim().toLowerCase() ?? "";
+	if (text === "") return { precision: RESULT_PRECISION };
+	const digits = text.replace("e", "");
+	if (!DECIMALS_FORMAT.test(text) || Number(digits) > MAX_DECIMALS) {
+		return `Decimals must be a whole number from 0 to ${MAX_DECIMALS}, with an "e" before or after it for scientific notation`;
 	}
-	return { notation: "fixed", precision: count };
+	if (!text.includes("e")) return { notation: "fixed", precision: Number(digits) };
+	// Significant digits: the one before the point and `digits` after it
+	const precision = digits === "" ? RESULT_PRECISION : Number(digits) + 1;
+	return number => compact_exponential(number, precision);
 }
 /** Evaluates `expression` and formats the result by `decimals` (see format_options); returns
  * `{ result }` or `{ error }`, never throws. */
@@ -75,8 +94,8 @@ function evaluate_expression(expression: string, decimals: string | null): Evalu
 /** What the Discord embed shows: `description` is left out of the page when empty, `color` is the
  * embed's side bar. */
 export type Embed = { title: string; description: string; color: string };
-/** The embed of `expression`, its result rounded to `decimals` digits after the point when given (see
- * format_options): "expression = result", or "expression → error" with the error message as the
+/** The embed of `expression`, its result formatted by `decimals` when given (see the module
+ * docstring): "expression = result", or "expression → error" with the error message as the
  * description. */
 export function build_embed(expression: string, decimals: string | null = null): Embed {
 	const evaluation = evaluate_expression(expression, decimals);

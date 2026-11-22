@@ -15,7 +15,13 @@ decimal point, like JavaScript's `toFixed`, every number of a unit, complex numb
 
     https://discord-math-embed.chrysaloid.workers.dev/embed?expression=1%2F3&decimals=2   ->   "1/3 = 0.33"
 
-Without it the result shows up to 14 significant digits.
+With an `e` before or after the number (`3e` or `e3`, the same thing) it shows scientific notation
+rounded like `toExponential`, but compact: `1000` is `1e3`, not `1.000e+3`. A lone `e` gives
+scientific notation with up to 14 significant digits.
+
+    https://discord-math-embed.chrysaloid.workers.dev/embed?expression=1000%2F3&decimals=2e   ->   "1000/3 = 3.33e2"
+
+Without `decimals` the result shows up to 14 significant digits.
 
 Opened in a browser, the same page ([src/embed.html](src/embed.html)) is an embed creator that does
 the encoding for you: type an expression (and the decimals, if any), see a live preview of the Discord embed, and copy the
