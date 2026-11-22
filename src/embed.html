@@ -58,6 +58,11 @@ h2 {
 a {
 	color: var(--discord_link);
 }
+/* Any list but the browser's bare `monospace` keeps code at the text's size: with that one generic
+family alone, Chrome and Firefox shrink the font to their 13px monospace default. */
+code {
+	font-family: ui-monospace, Consolas, monospace;
+}
 .subtext {
 	text-align: center;
 	margin-bottom: 2em;
