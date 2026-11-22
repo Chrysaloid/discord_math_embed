@@ -1,6 +1,7 @@
 /**
-The embed creator of the /embed page (src/embed.html): type an expression, see the Discord embed it
-gives, copy the markdown masked link to paste on Discord. Everything runs in the browser: the embed
+The embed creator of the /embed page (src/embed.html): type an expression, and the decimals to round
+its result to if any, see the Discord embed it gives, copy the markdown masked link to paste on
+Discord. Both go into the page's URL and the link, as `expression` and `decimals`. Everything runs in the browser: the embed
 comes from src/build_embed.ts, the same code the Worker puts into the Open Graph tags, so the
 preview is what Discord gets and typing makes no requests.
 
@@ -23,6 +24,7 @@ function element<T extends HTMLElement>(id: string): T {
 	return found as T;
 }
 const expression_input = element<HTMLInputElement>("expression");
+const decimals_input = element<HTMLInputElement>("decimals");
 const status_line = element("status");
 const message_link = element<HTMLAnchorElement>("message_link");
 const embed_box = element("embed");
@@ -37,16 +39,18 @@ const copy_button = element<HTMLButtonElement>("copy");
 function encode_query_value(text: string): string {
 	return encodeURIComponent(text).replace(/[!'()*]/g, character => "%" + character.charCodeAt(0).toString(16).toUpperCase());
 }
-function embed_url(expression: string): string {
-	return `${location.origin}/embed?expression=${encode_query_value(expression)}`;
+/** The URL's query: the expression, and the decimals unless they are blank. */
+function embed_query(expression: string, decimals: string): string {
+	const query = `?expression=${encode_query_value(expression)}`;
+	return decimals.trim() === "" ? query : `${query}&decimals=${encode_query_value(decimals)}`;
 }
 /** Backslash-escapes what Discord's markdown would otherwise format inside the link text. */
 function escape_discord_markdown(text: string): string {
 	return text.replace(/[\\*_~`|[\]<>:@#]/g, "\\$&");
 }
 //* Showing an embed
-function show_embed(expression: string, { title, description, color }: Embed): void {
-	const url = embed_url(expression);
+function show_embed(query: string, { title, description, color }: Embed): void {
+	const url = `${location.origin}/embed${query}`;
 	document.title = title;  // as the Worker's <title> would be for this expression
 	embed_provider.textContent = SITE_NAME;
 	message_link.textContent = title;
@@ -67,25 +71,29 @@ function show_nothing(): void {
 	markdown.textContent = "";
 	copy_button.disabled = true;
 }
-/** Shows the typed expression's embed, and puts the expression into the page's URL. An expression
- * that took longer than the Worker's CPU limit here gets a warning, as Discord may get no embed. */
+/** Shows the typed expression's embed, rounded to the typed decimals, and puts both into the page's
+ * URL. An expression that took longer than the Worker's CPU limit here gets a warning, as Discord
+ * may get no embed. */
 function update(): void {
 	const expression = expression_input.value;
-	history.replaceState(null, "", expression === "" ? location.pathname : `?expression=${encode_query_value(expression)}`);
+	const decimals = decimals_input.value;
+	const query = embed_query(expression, decimals);
+	history.replaceState(null, "", expression === "" ? location.pathname : query);
 	if (expression.trim() === "") {
 		show_nothing();
 		status_line.textContent = "Type an expression.";
 		return;
 	}
 	const start = performance.now();
-	const embed = build_embed(expression);
+	const embed = build_embed(expression, decimals);
 	const elapsed_ms = performance.now() - start;
-	show_embed(expression, embed);
+	show_embed(query, embed);
 	status_line.textContent = elapsed_ms <= WORKER_CPU_LIMIT_MS ? "" :
 		`This took ${Math.round(elapsed_ms)} ms to evaluate here. The server gets ${WORKER_CPU_LIMIT_MS} ms, so Discord may show no embed for it.`;
 }
 //* Events
 expression_input.addEventListener("input", update);
+decimals_input.addEventListener("input", update);
 copy_button.addEventListener("click", async () => {
 	await navigator.clipboard.writeText(markdown.textContent);
 	copy_button.textContent = "Copied";
@@ -96,4 +104,5 @@ build_embed("1+1");  // warms math.js up, so the first timed evaluation is not s
 const url_parameters = new URLSearchParams(location.search);
 const url_expression = url_parameters.get("expression") ?? url_parameters.get("expr") ?? "";
 expression_input.value = url_expression.trim() === "" ? DEFAULT_EXPRESSION : url_expression;
+decimals_input.value = url_parameters.get("decimals") ?? "";
 update();

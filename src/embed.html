@@ -84,6 +84,10 @@ code {
 	border: 1px solid #3f4147;
 	border-radius: 4px;
 }
+#decimals {
+	flex: 0 0 3.5em;
+	text-align: center;
+}
 .expression_row input:focus {
 	outline: 2px solid #5865f2;
 	outline-offset: -1px;
@@ -193,9 +197,15 @@ footer {
 <h1>Create your own embedded math</h1>
 <p class="subtext">A quick way to show expresssion value to your friends</p>
 
-<label class="expression_row">Expression:
+<!-- Decimals is text, not type="number": a number field empties a value it cannot parse (such as a
+URL's decimals=abc), and the preview would then hide the error Discord shows. -->
+<div class="expression_row">
+	<label for="expression">Expression:</label>
 	<input id="expression" type="text" spellcheck="false" autocomplete="off" autofocus>
-</label>
+	<label for="decimals">Decimals:</label>
+	<input id="decimals" type="text" inputmode="numeric" spellcheck="false" autocomplete="off" placeholder="any"
+		title="Digits after the decimal point, 0 to 100; empty shows up to 14 significant digits">
+</div>
 <p id="status"></p>
 
 <h2>Preview</h2>
@@ -218,6 +228,7 @@ footer {
 	Expressions are evaluated by <a href="https://mathjs.org/docs/expressions/syntax.html" target="_blank">math.js</a>.
 	It supports operators, functions (<code>sqrt</code>, <code>sin</code>, <code>log</code>, ...), constants (<code>pi</code>,
 	<code>e</code>), units (<code>5 cm to inch</code>), matrices, several expressions separated by <code>;</code>.
+	Decimals rounds the result to that many digits after the decimal point, like <code>toFixed</code>.
 </footer>
 </body>
 </html>
